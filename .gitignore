@@ -1,0 +1,16 @@
+# Ignorar entorno virtual
+.venv/
+venv/
+ENV/
+
+# Ignorar entorno
+.env
+
+# Ignorar archivos
+__pycache__/
+*.pyc
+
+# Config IDE
+.vscode/
+.idea/
+
