@@ -1,60 +1,76 @@
+from mysql.connector import Error
 from conexion import obtener_conexion
 
 def crear_tablas():
+    #Crea las tablas si no existen en MySQL.
     conexion = obtener_conexion()
-    cursor = conexion.cursor()
+    if not conexion:
+        return
 
-    # Crear tabla departamentos
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS departamentos (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            nombre VARCHAR(100) NOT NULL
+    try:
+        cursor = conexion.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS departamentos (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nombre VARCHAR(100) NOT NULL
             ) ENGINE=InnoDB
-    """)
-    
-    # Crear tabla empleados
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS empleados (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            nombre VARCHAR(100) NOT NULL,
-            email VARCHAR(100) NOT NULL UNIQUE,
-            password_hash VARCHAR(200) NOT NULL,
-            fecha_inicio DATE NOT NULL,
-            salario DECIMAL(10, 2),
-            direccion VARCHAR(200),
-            telefono VARCHAR(20),
-            departamento_id INT,
-            FOREIGN KEY (departamento_id) REFERENCES departamentos(id)
-        ) ENGINE=InnoDB
-    """)
-    
-    # Crear tabla proyectos
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS proyectos (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            nombre VARCHAR(100) NOT NULL,
-            descripcion VARCHAR(255),
-            fecha_inicio DATE
-        ) ENGINE=InnoDB
-    """)
-    
-    conexion.commit()
-    cursor.close()
-    conexion.close()
-    print("Tablas de EcoTech creadas exitosamente.")
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS empleados (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nombre VARCHAR(100) NOT NULL,
+                email VARCHAR(150) NOT NULL UNIQUE,
+                password_hash VARCHAR(256) NOT NULL,
+                fecha_inicio DATE NOT NULL,
+                salario DECIMAL(10, 2) NOT NULL,
+                direccion VARCHAR(200),
+                telefono VARCHAR(20),
+                departamento_id INT,
+                FOREIGN KEY (departamento_id) REFERENCES departamentos(id) ON DELETE SET NULL
+            ) ENGINE=InnoDB
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS proyectos (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nombre VARCHAR(100) NOT NULL,
+                descripcion VARCHAR(255),
+                fecha_inicio DATE,
+                fecha_fin DATE,
+                estado VARCHAR(50)
+            ) ENGINE=InnoDB
+        """)
+        conexion.commit()
+        print("Tablas del sistema EcoTech verificadas correctamente.")
+    except Error as err:
+        print(f"Error al crear la estructura de tablas: {err}")
+    finally:
+        if conexion.is_connected():
+            cursor.close()
+            conexion.close()
 
 def limpiar_tablas():
+    #Elimina y recrea las tablas para asegurar el esquema correcto en pruebas.
     conexion = obtener_conexion()
-    cursor = conexion.cursor()
+    if not conexion:
+        return
 
-    # Eliminar tablas si existen
-    cursor.execute("SET FOREIGN_KEY_CHECKS = 0")  # Desactivar temporalmente las comprobaciones de clave foránea
-    cursor.execute("TRUNCATE TABLE empleados")
-    cursor.execute("TRUNCATE TABLE departamentos")
-    cursor.execute("TRUNCATE TABLE proyectos")
-    cursor.execute("SET FOREIGN_KEY_CHECKS = 1")  # Reactivar las comprobaciones de clave foránea
-    
-    conexion.commit()
-    cursor.close()
-    conexion.close()
-    print("Tablas de EcoTech eliminadas exitosamente.")    
+    try:
+        cursor = conexion.cursor()
+        cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
+        cursor.execute("DROP TABLE IF EXISTS empleados")
+        cursor.execute("DROP TABLE IF EXISTS proyectos")
+        cursor.execute("DROP TABLE IF EXISTS departamentos")
+        cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
+        conexion.commit()
+        
+        # Recrear la estructura limpia
+        crear_tablas()
+        print("Base de datos reiniciada para pruebas.")
+    except Error as err:
+        print(f"Error al limpiar las tablas: {err}")
+    finally:
+        if conexion.is_connected():
+            cursor.close()
+            conexion.close()
